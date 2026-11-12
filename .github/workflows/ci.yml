@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # The rust-nickel commit to build; bump it to pick up new C API functions.
-      RUST_NICKEL_REV: 360bfae528678ec72adb591ca51d83ba8e8d7d45
+      RUST_NICKEL_REV: 268127d9cb3431eec6543e61e623541913209da2
     steps:
       - uses: actions/checkout@v5
       - uses: actions/checkout@v5
