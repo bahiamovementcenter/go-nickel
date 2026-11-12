@@ -1,11 +1,6 @@
 package nickel
 
 /*
-#cgo linux,amd64 LDFLAGS: ${SRCDIR}/lib/linux_amd64/libnickel_lang.a -lm
-#cgo linux,arm64 LDFLAGS: ${SRCDIR}/lib/linux_arm64/libnickel_lang.a -lm
-#cgo darwin,arm64 LDFLAGS: ${SRCDIR}/lib/darwin_arm64/libnickel_lang.a -lm
-#cgo windows,amd64 LDFLAGS: ${SRCDIR}/lib/windows_amd64/libnickel_lang.a -lm -lntdll
-
 #cgo CFLAGS: -I${SRCDIR}/include
 
 #include <nickel_lang.h>

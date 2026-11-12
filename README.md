@@ -102,3 +102,35 @@ func main() {
   fmt.Printf("now it's a number: %d\n", portNum)
 }
 ```
+
+# Packages (`nickel_embed` builds)
+
+Built with the `nickel_embed` tag, these bindings link the C library of
+[nickel-embed](https://github.com/bahiamovementcenter/rust-nickel) instead of
+the vendored one. Its header, which `include/nickel_lang.h` is a copy of, is a
+superset of Nickel's, and the extra functions add package imports
+(`import foo`):
+
+```go
+// The packages of the manifest nearest the current directory, fetched if
+// needed. Nickel's package manager is experimental.
+path, _ := nickel.FindManifest(".")
+packages, err := nickel.LoadManifest(path, "") // "" = the default cache directory
+if err != nil {
+  return err
+}
+ctx := nickel.NewContext()
+ctx.SetPackageMap(packages)
+expr, err := ctx.EvalDeep(`(import my_lib).settings`)
+```
+
+A map can also be built by hand from directories you already have (vendored,
+fetched by Nix): `NewPackageMap`, then `AddPackage(name, dir)` and
+`AddDependency(parent, name, dir)`.
+
+Build the library, then point cgo at it:
+
+```
+cargo build --release -p nickel-embed-capi   # in rust-nickel
+CGO_LDFLAGS="-L/path/to/rust-nickel/target/release" go build -tags nickel_embed
+```
