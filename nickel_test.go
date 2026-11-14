@@ -1,4 +1,4 @@
-package nickel
+package ncl
 
 import (
 	"bytes"

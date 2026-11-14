@@ -1,6 +1,4 @@
-//go:build nickel_embed
-
-package nickel
+package ncl
 
 /*
 #include <nickel_lang.h>
