@@ -13,7 +13,9 @@ platforms="linux_amd64 linux_arm64 darwin_arm64 windows_amd64"
 repo=https://github.com/bahiamovementcenter/rust-nickel
 cd "$(dirname "$0")/.."
 
-objcopy=$(command -v llvm-objcopy || ls /usr/bin/llvm-objcopy-* 2>/dev/null | sort -V | tail -n1)
+# Different LLVM versions write different bytes, and CI checks lib/ byte for byte, so CI pins
+# one with LLVM_OBJCOPY (Ubuntu 24.04's llvm-objcopy-18).
+objcopy=${LLVM_OBJCOPY:-$(command -v llvm-objcopy || ls /usr/bin/llvm-objcopy-* 2>/dev/null | sort -V | tail -n1)}
 [ -n "$objcopy" ] || { echo "needs llvm-objcopy (LLVM)" >&2; exit 1; }
 
 work=$(mktemp -d)

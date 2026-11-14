@@ -30,9 +30,12 @@ jobs:
 
   # lib/ and link.go come from the rust-nickel release named in RUST_NICKEL_VERSION.
   lib:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+      - run: sudo apt-get install -y --no-install-recommends llvm-18
       - run: scripts/update-lib.sh "$(cat RUST_NICKEL_VERSION)"
+        env:
+          LLVM_OBJCOPY: llvm-objcopy-18
       - name: lib/, include/ and link.go match that release
         run: git diff --exit-code

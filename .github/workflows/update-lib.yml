@@ -15,10 +15,13 @@ permissions:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+      - run: sudo apt-get install -y --no-install-recommends llvm-18
       - run: scripts/update-lib.sh "${{ inputs.version }}"
+        env:
+          LLVM_OBJCOPY: llvm-objcopy-18
       - uses: peter-evans/create-pull-request@v7
         with:
           branch: update-lib/${{ inputs.version }}
