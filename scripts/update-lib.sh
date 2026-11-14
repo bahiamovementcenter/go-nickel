@@ -13,6 +13,9 @@ platforms="linux_amd64 linux_arm64 darwin_arm64 windows_amd64"
 repo=https://github.com/bahiamovementcenter/rust-nickel
 cd "$(dirname "$0")/.."
 
+objcopy=$(command -v llvm-objcopy || ls /usr/bin/llvm-objcopy-* 2>/dev/null | sort -V | tail -n1)
+[ -n "$objcopy" ] || { echo "needs llvm-objcopy (LLVM)" >&2; exit 1; }
+
 work=$(mktemp -d)
 trap 'rm -r "$work"' EXIT
 
@@ -42,7 +45,12 @@ for p in $platforms; do
   name="nickel-embed-capi-$version-$p"
   tar -xzf "$work/$name.tar.gz" -C "$work"
   mkdir -p "lib/$p"
-  cp "$work/$name/libnickel_lang.a" "lib/$p/libnickel_lang.a"
+  # Go (1.26 on) refuses to link archives with LLVM bitcode sections, which Rust's prebuilt
+  # compiler_builtins objects carry. The machine code is all there, so drop them.
+  "$objcopy" \
+    --remove-section=.llvmbc --remove-section=.llvmcmd \
+    --remove-section=__LLVM,__bitcode --remove-section=__LLVM,__cmdline \
+    "$work/$name/libnickel_lang.a" "lib/$p/libnickel_lang.a"
   # The Windows build checks the header out with CRLF line endings.
   tr -d '\r' < "$work/$name/nickel_lang.h" > "$work/$name/header.lf"
   if [ -f "$work/header.h" ]; then
