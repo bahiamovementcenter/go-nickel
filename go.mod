@@ -1,3 +1,3 @@
-module github.com/nickel-lang/go-nickel
+module github.com/bahiamovementcenter/go-ncl
 
 go 1.25.2

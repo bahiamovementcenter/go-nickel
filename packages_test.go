@@ -1,6 +1,4 @@
-//go:build nickel_embed
-
-package nickel
+package ncl
 
 import (
 	"os"
@@ -80,7 +78,7 @@ func manifest(name, dependencies string) string {
   name = "` + name + `",
   description = "test",
   version = "0.1.0",
-  authors = ["go-nickel"],
+  authors = ["go-ncl"],
   minimal_nickel_version = "1.9.0",
   dependencies = { ` + dependencies + ` },
 } | std.package.Manifest
@@ -124,5 +122,31 @@ func TestLoadBadManifest(t *testing.T) {
 	})
 	if _, err := LoadManifest(filepath.Join(dir, "Nickel-pkg.ncl"), filepath.Join(dir, "cache")); err == nil {
 		t.Error("expected an error")
+	}
+}
+
+// xD's `xd` package, at the commit rust-nickel pins, fetched from GitHub over https.
+const xdCommit = "2f104cc8c7ea464f30af04d4ab6cbe11de0592d4"
+
+func TestXdPackage(t *testing.T) {
+	if os.Getenv("NCL_TEST_OFFLINE") != "" {
+		t.Skip("fetches xD from GitHub")
+	}
+	dir := t.TempDir()
+	writeFiles(t, dir, map[string]string{
+		"Nickel-pkg.ncl": manifest("app", `xd = 'Git {
+      url = "https://github.com/bahiamovementcenter/xD.git",
+      ref = 'Commit "`+xdCommit+`",
+      path = "nickel",
+    }`),
+	})
+	m, err := LoadManifest(filepath.Join(dir, "Nickel-pkg.ncl"), filepath.Join(dir, "cache"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := NewContext()
+	ctx.SetPackageMap(m)
+	if got := evalString(t, ctx, "(import xd).units.jd.pattern.render [1, 1, 11]"); got != "11.11" {
+		t.Errorf("rendered %q", got)
 	}
 }
