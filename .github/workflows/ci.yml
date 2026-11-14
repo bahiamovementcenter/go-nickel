@@ -24,36 +24,15 @@ jobs:
         with:
           go-version: '>=1.25.2'
 
+      - run: go vet .
       - name: test
         run: go test .
 
-  # The nickel_embed build: linked against nickel-embed's C library (rust-nickel's
-  # nickel-embed-capi), which adds package maps and more to Nickel's C API.
-  embed:
+  # lib/ and link.go come from the rust-nickel release named in RUST_NICKEL_VERSION.
+  lib:
     runs-on: ubuntu-latest
-    env:
-      # The rust-nickel commit to build; bump it to pick up new C API functions.
-      RUST_NICKEL_REV: 268127d9cb3431eec6543e61e623541913209da2
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/checkout@v5
-        with:
-          repository: bahiamovementcenter/rust-nickel
-          ref: ${{ env.RUST_NICKEL_REV }}
-          path: rust-nickel
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust-nickel
-      - run: cargo build --release -p nickel-embed-capi
-        working-directory: rust-nickel
-      - name: Header matches the library's
-        run: diff include/nickel_lang.h rust-nickel/nickel-embed-capi/include/nickel_lang.h
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '>=1.25.2'
-      # Removing the shared library links the archive, as a release build would.
-      - run: rm rust-nickel/target/release/libnickel_lang.so
-      - run: go test -tags nickel_embed .
-        env:
-          CGO_LDFLAGS: -L${{ github.workspace }}/rust-nickel/target/release
+      - run: scripts/update-lib.sh "$(cat RUST_NICKEL_VERSION)"
+      - name: lib/, include/ and link.go match that release
+        run: git diff --exit-code

@@ -1,0 +1,27 @@
+name: Update lib
+
+# Replaces lib/ with the C library of a rust-nickel release and opens a pull request.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: rust-nickel release tag, such as v0.1.0
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: scripts/update-lib.sh "${{ inputs.version }}"
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: update-lib/${{ inputs.version }}
+          commit-message: "lib: rust-nickel ${{ inputs.version }}"
+          title: "lib: rust-nickel ${{ inputs.version }}"
+          body: Replaces `lib/`, `include/nickel_lang.h` and `link.go` with the C library of rust-nickel ${{ inputs.version }}, checked against the release's SHA256SUMS.

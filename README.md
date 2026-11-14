@@ -1,28 +1,30 @@
-# Go bindings for Nickel
+# go-ncl: Go bindings for Nickel
 
-With these golang bindings, you can use the [Nickel](https://nickel-lang.org) configuration
-language directly from go as part of your single static executable.
+With these Go bindings, you can use the [Nickel](https://nickel-lang.org) configuration
+language directly from Go as part of your single static executable.
+
+They link [nickel-embed](https://github.com/bahiamovementcenter/rust-nickel), the engine every
+`*-ncl` binding shares, through its C library, whose header is a superset of Nickel's own
+`nickel_lang.h`. The library is prebuilt for Linux (amd64, arm64), macOS (arm64) and Windows
+(amd64) and committed in `lib/`, so `go get` is all it takes: no Rust toolchain needed. This
+started as a fork of [nickel-lang/go-nickel](https://github.com/nickel-lang/go-nickel).
 
 # Getting started
 
-Add Nickel bindings to your project using `go get`:
-
 ```
-go get github.com/nickel-lang/go-nickel@main
+go get github.com/bahiamovementcenter/go-ncl
 ```
-
-(You need to use `main` because we haven't had any releases yet.)
 
 Then you can evaluate Nickel strings from within your go code:
 
 ```go
 import (
   "fmt"
-  "github.com/nickel-lang/go-nickel"
+  ncl "github.com/bahiamovementcenter/go-ncl"
 )
 
 func main() {
-  ctx := nickel.NewContext()
+  ctx := ncl.NewContext()
 	expr, _ := ctx.EvalDeep(`
   {
     port = 80,
@@ -43,7 +45,7 @@ These bindings have support for go's native unmarshalling:
 ```go
 import (
   "fmt"
-  "github.com/nickel-lang/go-nickel"
+  ncl "github.com/bahiamovementcenter/go-ncl"
 )
 
 type Config struct {
@@ -52,7 +54,7 @@ type Config struct {
 }
 
 func main() {
-  ctx := nickel.NewContext()
+  ctx := ncl.NewContext()
 	expr, _ := ctx.EvalDeep(`
   {
     port = 80,
@@ -75,11 +77,11 @@ delay evaluating the elements.
 ```go
 import (
   "fmt"
-  "github.com/nickel-lang/go-nickel"
+  ncl "github.com/bahiamovementcenter/go-ncl"
 )
 
 func main() {
-  ctx := nickel.NewContext()
+  ctx := ncl.NewContext()
 	expr, _ := ctx.EvalShallow(`{
     port = 79 + 1,
     name = "my" ++ "server"
@@ -103,23 +105,19 @@ func main() {
 }
 ```
 
-# Packages (`nickel_embed` builds)
+# Packages
 
-Built with the `nickel_embed` tag, these bindings link the C library of
-[nickel-embed](https://github.com/bahiamovementcenter/rust-nickel) instead of
-the vendored one. Its header, which `include/nickel_lang.h` is a copy of, is a
-superset of Nickel's, and the extra functions add package imports
-(`import foo`):
+Package imports (`import foo`) resolve through a package map:
 
 ```go
 // The packages of the manifest nearest the current directory, fetched if
 // needed. Nickel's package manager is experimental.
-path, _ := nickel.FindManifest(".")
-packages, err := nickel.LoadManifest(path, "") // "" = the default cache directory
+path, _ := ncl.FindManifest(".")
+packages, err := ncl.LoadManifest(path, "") // "" = the default cache directory
 if err != nil {
   return err
 }
-ctx := nickel.NewContext()
+ctx := ncl.NewContext()
 ctx.SetPackageMap(packages)
 expr, err := ctx.EvalDeep(`(import my_lib).settings`)
 ```
@@ -128,9 +126,22 @@ A map can also be built by hand from directories you already have (vendored,
 fetched by Nix): `NewPackageMap`, then `AddPackage(name, dir)` and
 `AddDependency(parent, name, dir)`.
 
-Build the library, then point cgo at it:
+This is how [xD](https://github.com/bahiamovementcenter/xD)'s `xd` package is
+used: depend on it in your `Nickel-pkg.ncl` (a `'Git` dependency with
+`path = "nickel"`), then `(import xd).units.jd.pattern.render [1, 1, 11]` gives
+`"11.11"`.
+
+# Development
 
 ```
-cargo build --release -p nickel-embed-capi   # in rust-nickel
-CGO_LDFLAGS="-L/path/to/rust-nickel/target/release" go build -tags nickel_embed
+go test .                  # NCL_TEST_OFFLINE=1 skips the test that fetches xD
 ```
+
+`lib/`, `include/nickel_lang.h` and `link.go` come from the rust-nickel release
+named in `RUST_NICKEL_VERSION`. To move to a new release, run the "Update lib"
+workflow with its tag (or `scripts/update-lib.sh vX.Y.Z` locally), which
+downloads the release's archives, checks their checksums and opens a pull
+request. CI checks that the committed files match the named release.
+
+Releases of this module are tags `vX.Y.Z`; its version moves with its API, not
+with rust-nickel's.
