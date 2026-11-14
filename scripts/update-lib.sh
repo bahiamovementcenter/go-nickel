@@ -43,18 +43,28 @@ for p in $platforms; do
   tar -xzf "$work/$name.tar.gz" -C "$work"
   mkdir -p "lib/$p"
   cp "$work/$name/libnickel_lang.a" "lib/$p/libnickel_lang.a"
+  # The Windows build checks the header out with CRLF line endings.
+  tr -d '\r' < "$work/$name/nickel_lang.h" > "$work/$name/header.lf"
   if [ -f "$work/header.h" ]; then
-    cmp -s "$work/header.h" "$work/$name/nickel_lang.h" || {
+    cmp -s "$work/header.h" "$work/$name/header.lf" || {
       echo "$p: nickel_lang.h differs from the other platforms'" >&2
       exit 1
     }
   else
-    cp "$work/$name/nickel_lang.h" "$work/header.h"
+    cp "$work/$name/header.lf" "$work/header.h"
   fi
   goos=${p%_*}
   goarch=${p#*_}
-  # The C compiler adds -lc itself; the rest is what the archive needs.
-  flags=$(tr ' ' '\n' < "$work/$name/link-flags.txt" | grep -v -e '^-lc$' -e '^$' | tr '\n' ' ' | sed 's/ $//')
+  # The C compiler adds -lc itself; the rest is what the archive needs. On Windows, rustc names
+  # import libraries that come with Rust crates rather than MinGW: winapi's `winapi_<dll>`
+  # copies of MinGW's own, and windows-targets' `windows.<version>`, which covers the Win32 API
+  # through MinGW's import libraries of the same DLLs.
+  flags=$(sed 's/\x1b\[[0-9;]*m//g' "$work/$name/link-flags.txt" | tr ' ' '\n' \
+    | grep -v -e '^-lc$' -e '^$' -e '^-lwindows\.' | sed 's/^-lwinapi_/-l/' \
+    | tr '\n' ' ' | sed 's/ $//')
+  if [ "$goos" = windows ]; then
+    flags="$flags -ladvapi32 -lole32 -loleaut32 -lshell32 -luser32 -lsecur32 -lcrypt32 -lncrypt -liphlpapi"
+  fi
   echo "#cgo $goos,$goarch LDFLAGS: \${SRCDIR}/lib/$p/libnickel_lang.a $flags" >> "$work/link.go"
 done
 
